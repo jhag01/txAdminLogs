@@ -6,10 +6,9 @@ author 'Joost#5866'
 description 'txAdmin Logs'
 version '1.0.4'
 
-shared_scripts {
-    'config.lua'
-}
+server_only "yes"
 
 server_scripts {
+    'config.lua',
     'sv_txadmin.lua'
 }
