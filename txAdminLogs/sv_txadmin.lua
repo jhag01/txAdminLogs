@@ -7,7 +7,7 @@ AddEventHandler('txAdmin:events:playerKicked', function(eventData)
     local author = eventData.author
     local reason = eventData.reason
 
-    sendToDiscord('Player Kicked', "Name: **" .. GetPlayerName(target) .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**", 65280)
+    sendToDiscord('Player Kicked', "PlayerID: **" .. target .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**", 65280)
 
 end)
 
@@ -38,8 +38,8 @@ AddEventHandler('txAdmin:events:playerBanned', function(eventData)
 
     if (type(target) == "table") then 
         playername = "`Offline Ban`"
-    else 
-        playername = GetPlayerName(target)
+    else
+        playername = target
     end
     
     sendToDiscord('Player Banned', "Name: **" .. playername .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**\nID: **" .. id .. "**\nExpires: **" .. exp .. "**", 65280)
