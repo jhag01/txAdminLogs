@@ -1,13 +1,10 @@
-ESX = nil
-TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-
 AddEventHandler('txAdmin:events:playerKicked', function(eventData)
 
     local target = eventData.target
     local author = eventData.author
     local reason = eventData.reason
 
-    sendToDiscord('Player Kicked', "PlayerID: **" .. target .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**", 65280)
+    sendToDiscord('Player Kicked', "Name: **" .. GetPlayerName(target) .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**", 65280)
 
 end)
 
@@ -38,8 +35,8 @@ AddEventHandler('txAdmin:events:playerBanned', function(eventData)
 
     if (type(target) == "table") then 
         playername = "`Offline Ban`"
-    else
-        playername = target
+    else 
+        playername = GetPlayerName(target)
     end
     
     sendToDiscord('Player Banned', "Name: **" .. playername .. "** \nAuthor: **" .. author .. "** \nReason: **" .. reason .. "**\nID: **" .. id .. "**\nExpires: **" .. exp .. "**", 65280)
@@ -63,10 +60,10 @@ AddEventHandler('txAdmin:events:announcement', function(eventData)
 
     if Config.FilterAnnouncements then
         if author ~= 'txAdmin' then
-            sendToDiscord('Announcement', "Author: **" .. author .. "**\nBericht: **" .. msg .. "**", 65280)
+            sendToDiscord('Announcement', "Author: **" .. author .. "**\Message: **" .. msg .. "**", 65280)
         end
     else
-        sendToDiscord('Announcement', "Author: **" .. author .. "**\nBericht: **" .. msg .. "**", 65280)
+        sendToDiscord('Announcement', "Author: **" .. author .. "**\Message: **" .. msg .. "**", 65280)
     end
 
 
@@ -90,6 +87,16 @@ AddEventHandler('txAdmin:events:healedPlayer', function(eventData)
 
     sendToDiscord('Player Healed', "Name: **" .. playername .. "**", 65280)
 
+end)
+
+AddEventHandler('txAdmin:events:serverShuttingDown', function(eventData)
+
+    local delay = eventData.delay
+    local author = eventData.author
+    local msg = eventData.message
+        
+        
+    sendToDiscord('Server Shutdown', "Author: **" .. author .. "**\Message: **" .. msg .. "**\Delay: **" .. delay .. "ms**", 65280)
 end)
 
 function sendToDiscord(header, message)
