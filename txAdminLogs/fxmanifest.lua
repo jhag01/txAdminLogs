@@ -4,7 +4,7 @@ games { 'gta5' }
 
 author 'Joost#5866'
 description 'txAdmin Logs'
-version '1.0.4'
+version '1.0.5'
 
 server_only "yes"
 
