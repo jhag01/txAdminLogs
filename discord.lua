@@ -15,7 +15,7 @@ function sendToDiscord(data)
                     ['text'] = Settings.Bot.FooterText,
                     ['icon_url'] = Settings.Bot.FooterIcon,
                 },
-                ['description'] = data.description,
+                ['fields'] = data.fields,
                 ['timestamp'] = Settings.Bot.IncludeTimestamp and os.date('!%Y-%m-%dT%H:%M:%SZ') or nil,
             }
         }

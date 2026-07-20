@@ -13,6 +13,17 @@ Settings.MasterWebhook = {
     URL = 'WEBHOOK'
 }
 
+-- Add `enabled = false` to any entry below (Settings.Events, Settings.menuEvents,
+-- Settings.DeathLog) to silence it without deleting the row, e.g.:
+-- ['consoleCommand'] = { enabled = false, color = 0, title = '...', webhook = 'WEBHOOK' },
+
+Settings.DeathLog = {
+    enabled = true,
+    color = 2895667,
+    title = '💀 Player Death',
+    webhook = 'WEBHOOK'
+}
+
 Settings.Events = {
     -- Server-Related Events
     ['announcement']        = { color = 16776960, title = '📢 txAdmin: Announcement', webhook = 'WEBHOOK' },

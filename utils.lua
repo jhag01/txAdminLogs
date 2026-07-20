@@ -11,16 +11,33 @@ local function resolveWebhook(eventInfo)
     return Settings.MasterWebhook.URL
 end
 
+local function truncate(str, maxLen)
+    str = tostring(str)
+    if #str > maxLen then
+        return str:sub(1, maxLen - 1) .. "…"
+    end
+    return str
+end
+
+-- Discord caps embeds at 25 fields, and each field needs a non-empty name/value
+local function addField(fields, name, value, inline)
+    if #fields >= 25 then return end
+    value = tostring(value)
+    if value == "" then value = "—" end
+    fields[#fields + 1] = {
+        name = truncate(name, 256),
+        value = truncate(value, 1024),
+        inline = inline or false
+    }
+end
+
 function prepareEvents(event, parameters)
     local eventInfo = Settings.Events[event]
-    if not eventInfo then return end
+    if not eventInfo or eventInfo.enabled == false then return end
 
-    local formattedDescription
+    local fields = {}
 
-    if parameters == nil then
-        formattedDescription = "No additional details provided."
-    elseif type(parameters) == 'table' then
-        formattedDescription = ""
+    if type(parameters) == 'table' then
         for key, value in pairs(parameters) do
             local label
             if type(key) == 'string' then
@@ -30,34 +47,35 @@ function prepareEvents(event, parameters)
             end
 
             if type(value) == 'table' then
-                local subValues = ""
+                local subValues = {}
                 for _, subVal in pairs(value) do
-                    subValues = subValues .. "• " .. tostring(subVal) .. "\n"
+                    subValues[#subValues + 1] = "• " .. tostring(subVal)
                 end
-                formattedDescription = formattedDescription .. string.format("**%s**:\n%s", label, subValues)
+                addField(fields, label, table.concat(subValues, "\n"))
             elseif type(key) == 'string' and key:lower() == "expiration" then
                 if type(value) == "number" and value > 0 then
-                    formattedDescription = formattedDescription .. string.format("**%s**: <t:%s:f> (<t:%s:R>)\n", label, value, value)
+                    addField(fields, label, ("<t:%s:f> (<t:%s:R>)"):format(value, value))
                 elseif value == false or value == 0 then
-                    formattedDescription = formattedDescription .. string.format("**%s**: Permanent\n", label)
+                    addField(fields, label, "Permanent")
                 else
-                    formattedDescription = formattedDescription .. string.format("**%s**: %s\n", label, tostring(value))
+                    addField(fields, label, tostring(value))
                 end
             else
-                local valStr = tostring(value)
-                if valStr ~= "" then
-                    formattedDescription = formattedDescription .. string.format("**%s**: %s\n", label, valStr)
-                end
+                addField(fields, label, tostring(value), true)
             end
         end
-    else
-        formattedDescription = tostring(parameters)
+    elseif parameters ~= nil then
+        addField(fields, "Details", tostring(parameters))
+    end
+
+    if #fields == 0 then
+        addField(fields, "Details", "No additional details provided.")
     end
 
     sendToDiscord({
         title = eventInfo.title or "Unknown Log Type",
         color = eventInfo.color or 8421504,
-        description = formattedDescription,
+        fields = fields,
         webhook = resolveWebhook(eventInfo)
     })
 end
@@ -102,7 +120,7 @@ local targetedActions = {
 
 function prepareMenuEvent(source, action, data)
     local eventInfo = Settings.menuEvents[action]
-    if not eventInfo then return end
+    if not eventInfo or eventInfo.enabled == false then return end
 
     local description = eventInfo.description
 
@@ -117,12 +135,34 @@ function prepareMenuEvent(source, action, data)
         actionDetail = description
     end
 
-    local adminHeader = ("**Admin**: %s [%s]\n"):format(GetPlayerName(source) or "Unknown", source)
+    local fields = {}
+    addField(fields, "Admin", ("%s [%s]"):format(GetPlayerName(source) or "Unknown", source), true)
+    addField(fields, "Action", actionDetail, true)
 
     sendToDiscord({
         title = eventInfo.title or "Unknown Menu Action",
         color = eventInfo.color or 8421504,
-        description = adminHeader .. "**Action**: " .. actionDetail,
+        fields = fields,
+        webhook = resolveWebhook(eventInfo)
+    })
+end
+
+-- txAdmin's own client-side death detector fires this automatically for every
+-- death (TriggerServerEvent('txsv:logger:deathEvent', killer, cause)); `source`
+-- is the victim, `killer` is a server id or `false`/absent for suicide/NPC.
+function prepareDeathEvent(victim, killer, cause)
+    local eventInfo = Settings.DeathLog
+    if not eventInfo or eventInfo.enabled == false then return end
+
+    local fields = {}
+    addField(fields, "Victim", getTargetName(victim), true)
+    addField(fields, "Killer", killer and getTargetName(killer) or "N/A", true)
+    addField(fields, "Cause", cause or "unknown", true)
+
+    sendToDiscord({
+        title = eventInfo.title or "💀 Player Death",
+        color = eventInfo.color or 8421504,
+        fields = fields,
         webhook = resolveWebhook(eventInfo)
     })
 end
