@@ -2,9 +2,9 @@ Settings = {}
 
 Settings.Bot = {
     Username = 'txAdmin Logs',
-    AvatarURL = '',
+    AvatarURL = nil, -- leave nil unless you have a valid image URL; Discord rejects an empty string
     FooterText = 'txAdmin Logs • ' .. os.date('%Y'),
-    FooterIcon = '',
+    FooterIcon = nil, -- same as above
     IncludeTimestamp = true
 }
 
@@ -49,8 +49,9 @@ Settings.menuEvents = {
     ['deleteVehicle']       = { color = 15158332, title = '🗑️ Menu: Deleted Vehicle', description = 'deleted a vehicle', webhook = 'WEBHOOK' },
     ['vehicleRepair']       = { color = 3066993,  title = '🔧 Menu: Repaired Vehicle', description = 'repaired their vehicle', webhook = 'WEBHOOK' },
     ['vehicleBoost']        = { color = 16776960, title = '🚀 Menu: Boosted Vehicle', description = 'boosted their vehicle', webhook = 'WEBHOOK' },
-    ['healSelf']            = { color = 3066993,  title = '❤️ Menu: Healed Self', description = 'healed themself', webhook = 'WEBHOOK' },
-    ['healAll']             = { color = 3066993,  title = '🏥 Menu: Healed Everyone', description = 'healed all players!', webhook = 'WEBHOOK' },
+    -- Heals (self/all/target) are intentionally not logged here: txAdmin already fires
+    -- 'playerHealed' under Settings.Events for every heal, whether it came from the menu
+    -- or the web panel. Logging it again here would just duplicate the same entry.
     ['announcement']        = { color = 16776960, title = '📢 Menu: Server Announcement', description = 'made a server-wide announcement: %s', webhook = 'WEBHOOK' },
     ['clearArea']           = { color = 9807270,  title = '🧹 Menu: Cleared Area', description = 'cleared an area with %dm radius', webhook = 'WEBHOOK' },
 
@@ -58,7 +59,6 @@ Settings.menuEvents = {
     ['spectatePlayer']      = { color = 3447003,  title = '👁️ Menu: Started Spectating', description = 'started spectating player %s', webhook = 'WEBHOOK' },
     ['freezePlayer']        = { color = 15105570, title = '🧊 Menu: Toggled Freeze', description = 'toggled freeze on player %s', webhook = 'WEBHOOK' },
     ['teleportPlayer']      = { color = 10181046, title = '🏃 Menu: Teleported to Player', description = 'teleported to player %s (x=%.3f, y=%.3f, z=%.3f)', webhook = 'WEBHOOK' },
-    ['healPlayer']          = { color = 3066993,  title = '🩹 Menu: Healed Player', description = 'healed player %s', webhook = 'WEBHOOK' },
     ['summonPlayer']        = { color = 10181046, title = '🪄 Menu: Summoned Player', description = 'summoned player %s', webhook = 'WEBHOOK' },
 
     -- Troll Options

@@ -4,26 +4,38 @@ function getTargetName(id)
     return name and ("%s [%s]"):format(name, id) or ("Offline Player [%s]"):format(id)
 end
 
-function prepareEvents(event, parameters)
-    local data = Settings.Events[event]
-    if not data then return end
-    local color = data.color or 8421504
-    local title = data.title or "Unknown Log Type"
-    local webhook = (data.webhook and data.webhook ~= 'WEBHOOK') and data.webhook or Settings.MasterWebhook.URL
+local function resolveWebhook(eventInfo)
+    if eventInfo.webhook and eventInfo.webhook ~= 'WEBHOOK' then
+        return eventInfo.webhook
+    end
+    return Settings.MasterWebhook.URL
+end
 
-    local formattedDescription = ""
-    
-    if type(parameters) == 'table' then
+function prepareEvents(event, parameters)
+    local eventInfo = Settings.Events[event]
+    if not eventInfo then return end
+
+    local formattedDescription
+
+    if parameters == nil then
+        formattedDescription = "No additional details provided."
+    elseif type(parameters) == 'table' then
+        formattedDescription = ""
         for key, value in pairs(parameters) do
-            local label = key:gsub("(%l)(%A)", "%1 %2"):gsub("^%l", string.upper)
-            
+            local label
+            if type(key) == 'string' then
+                label = key:gsub("(%l)(%u)", "%1 %2"):gsub("^%l", string.upper)
+            else
+                label = "Entry " .. tostring(key)
+            end
+
             if type(value) == 'table' then
                 local subValues = ""
                 for _, subVal in pairs(value) do
                     subValues = subValues .. "• " .. tostring(subVal) .. "\n"
                 end
                 formattedDescription = formattedDescription .. string.format("**%s**:\n%s", label, subValues)
-            elseif key:lower() == "expiration" then
+            elseif type(key) == 'string' and key:lower() == "expiration" then
                 if type(value) == "number" and value > 0 then
                     formattedDescription = formattedDescription .. string.format("**%s**: <t:%s:f> (<t:%s:R>)\n", label, value, value)
                 elseif value == false or value == 0 then
@@ -33,7 +45,7 @@ function prepareEvents(event, parameters)
                 end
             else
                 local valStr = tostring(value)
-                if valStr ~= "" and valStr ~= "table: 0x..." then 
+                if valStr ~= "" then
                     formattedDescription = formattedDescription .. string.format("**%s**: %s\n", label, valStr)
                 end
             end
@@ -43,56 +55,74 @@ function prepareEvents(event, parameters)
     end
 
     sendToDiscord({
-        title = title,
-        color = color,
+        title = eventInfo.title or "Unknown Log Type",
+        color = eventInfo.color or 8421504,
         description = formattedDescription,
-        webhook = webhook
+        webhook = resolveWebhook(eventInfo)
     })
 end
 
+-- Formatters for menu actions whose description needs the real event data
+-- filled in (coords, target names, etc). Anything not listed here either
+-- needs no formatting (e.g. "healed themself") or is a plain %s of the
+-- target's name (see targetedActions below).
+local menuFormatters = {
+    teleportCoords = function(data, description)
+        return description:format(data.x or 0.0, data.y or 0.0, data.z or 0.0)
+    end,
+    teleportPlayer = function(data, description)
+        return description:format(getTargetName(data.target), data.x or 0.0, data.y or 0.0, data.z or 0.0)
+    end,
+    clearArea = function(data, description)
+        return description:format(data or 0)
+    end,
+    playerModeChanged = function(data, description)
+        return description:format(tostring(data))
+    end,
+    spawnVehicle = function(data, description)
+        return description:format(tostring(data))
+    end,
+    announcement = function(data, description)
+        return description:format(tostring(data))
+    end,
+    showPlayerIDs = function(data, description)
+        return description:format(data and "ON" or "OFF")
+    end,
+}
+
+-- Actions whose data is just a player id/server id to resolve into a name
+local targetedActions = {
+    spectatePlayer = true,
+    freezePlayer = true,
+    summonPlayer = true,
+    drunkEffect = true,
+    setOnFire = true,
+    wildAttack = true,
+}
+
 function prepareMenuEvent(source, action, data)
-    local data = Settings.menuEvents[action]
-    if not data then return end
+    local eventInfo = Settings.menuEvents[action]
+    if not eventInfo then return end
 
-    local color = data.color or 8421504
-    local title = data.title or "Unknown Menu Action"
-    local webhook = (data.webhook and data.webhook ~= 'WEBHOOK') and data.webhook or Settings.MasterWebhook.URL
+    local description = eventInfo.description
 
-    local adminName = GetPlayerName(source) or "Unknown"
-    local adminHeader = ("**Admin**: %s [%s]\n"):format(adminName, source)
-
-    local actionDetail = ""
-    
-    if action == 'teleportCoords' then
-        actionDetail = data.description:format(data.x or 0.0, data.y or 0.0, data.z or 0.0)
-
-    elseif action == 'teleportPlayer' then
-        local targetName = getTargetName(data.target)
-        actionDetail = data.description:format(targetName, data.x or 0.0, data.y or 0.0, data.z or 0.0)
-
-    elseif action == 'clearArea' then
-        actionDetail = data.description:format(data or 0)
-
-    elseif action == 'playerModeChanged' or action == 'spawnVehicle' or action == 'announcement' then
-        actionDetail = data.description:format(tostring(data))
-
-    elseif action == 'showPlayerIDs' then
-        actionDetail = data.description:format(data and "ON" or "OFF")
-
-    elseif type(data) == 'number' or (type(data) == 'string' and action ~= 'spawnVehicle') then
-        local targetName = getTargetName(data)
-        actionDetail = data.description:format(targetName)
-
+    local actionDetail
+    if menuFormatters[action] then
+        actionDetail = menuFormatters[action](data, description)
+    elseif targetedActions[action] then
+        actionDetail = description:format(getTargetName(data))
     else
-        actionDetail = data.description
+        -- No dynamic data to insert (deleteVehicle, vehicleRepair, vehicleBoost,
+        -- healSelf, healAll, teleportWaypoint)
+        actionDetail = description
     end
 
-    local finalDescription = adminHeader .. "**Action**: " .. actionDetail
+    local adminHeader = ("**Admin**: %s [%s]\n"):format(GetPlayerName(source) or "Unknown", source)
 
     sendToDiscord({
-        title = title,
-        color = color,
-        description = finalDescription,
-        webhook = webhook
+        title = eventInfo.title or "Unknown Menu Action",
+        color = eventInfo.color or 8421504,
+        description = adminHeader .. "**Action**: " .. actionDetail,
+        webhook = resolveWebhook(eventInfo)
     })
 end
