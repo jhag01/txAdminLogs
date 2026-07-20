@@ -80,10 +80,9 @@ function prepareEvents(event, parameters)
     })
 end
 
--- Formatters for menu actions whose description needs the real event data
--- filled in (coords, target names, etc). Anything not listed here either
--- needs no formatting (e.g. "healed themself") or is a plain %s of the
--- target's name (see targetedActions below).
+-- Actions whose description has a %s/%.3f placeholder to fill from the real
+-- event data; anything else either needs no data or just needs a target name
+-- substituted in (targetedActions below).
 local menuFormatters = {
     teleportCoords = function(data, description)
         return description:format(data.x or 0.0, data.y or 0.0, data.z or 0.0)
@@ -108,7 +107,6 @@ local menuFormatters = {
     end,
 }
 
--- Actions whose data is just a player id/server id to resolve into a name
 local targetedActions = {
     spectatePlayer = true,
     freezePlayer = true,
@@ -130,8 +128,6 @@ function prepareMenuEvent(source, action, data)
     elseif targetedActions[action] then
         actionDetail = description:format(getTargetName(data))
     else
-        -- No dynamic data to insert (deleteVehicle, vehicleRepair, vehicleBoost,
-        -- healSelf, healAll, teleportWaypoint)
         actionDetail = description
     end
 
