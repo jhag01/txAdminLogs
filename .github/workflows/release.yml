@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Release Folder
+        run: |
+          mkdir -p release_build/${{ github.event.repository.name }}
+
+          cp fxmanifest.lua release_build/${{ github.event.repository.name }}/
+          cp main.lua release_build/${{ github.event.repository.name }}/
+          cp settings.lua release_build/${{ github.event.repository.name }}/
+          cp utils.lua release_build/${{ github.event.repository.name }}/
+          cp discord.lua release_build/${{ github.event.repository.name }}/
+          cp LICENSE release_build/${{ github.event.repository.name }}/
+          cp README.md release_build/${{ github.event.repository.name }}/
+
+          sed -i -E "s/^version .*/version '${{ github.ref_name }}'/" release_build/${{ github.event.repository.name }}/fxmanifest.lua
+
+      - name: Zip the Final Resource
+        working-directory: ./release_build
+        run: zip -r ${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}
+
+      - name: Upload Zip to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_build/${{ github.event.repository.name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit Version Bump to Main Branch
+        if: github.event_name == 'release'
+        run: |
+          sed -i -E "s/^version .*/version '${{ github.ref_name }}'/" fxmanifest.lua
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add fxmanifest.lua
+          git commit -m "chore: bump version to ${{ github.ref_name }}"
+          git push origin HEAD:main
